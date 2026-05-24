@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Upload, Download, FileSpreadsheet, AlertTriangle, CheckCircle2, Plus,
@@ -15,14 +16,29 @@ import type { CatalogItem } from "@/hooks/useCatalog";
 
 type Computed = RawRow & {
   id: string;
+  purchaseToman: number;
   finalPrice: number;
   commissionAmount: number;
 };
 
-export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: CatalogItem[]) => void }) {
+type Props = {
+  onAddToCatalog: (items: CatalogItem[]) => void;
+  aedRate: number;
+};
+
+export function BulkManager({ onAddToCatalog, aedRate }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Computed[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const compute = (parsed: RawRow[], rate: number): Computed[] =>
+    parsed.map((r) => {
+      const purchaseToman = r.currency === "AED" ? r.purchase * rate : r.purchase;
+      const { finalPrice, commissionAmount } = calcPricing(
+        purchaseToman, r.fixed, r.profit, r.commission,
+      );
+      return { ...r, id: crypto.randomUUID(), purchaseToman, finalPrice, commissionAmount };
+    });
 
   const handleFile = async (file: File | null | undefined) => {
     if (!file) return;
@@ -33,11 +49,7 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
         toast.error("هیچ سطری در فایل پیدا نشد");
         return;
       }
-      const computed: Computed[] = parsed.map((r) => {
-        const { finalPrice, commissionAmount } = calcPricing(r.purchase, r.fixed, r.profit, r.commission);
-        return { ...r, id: crypto.randomUUID(), finalPrice, commissionAmount };
-      });
-      setRows(computed);
+      setRows(compute(parsed, aedRate));
       toast.success(`${parsed.length} سطر بارگذاری شد`);
     } catch (e) {
       console.error(e);
@@ -50,12 +62,29 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
 
   const incompleteCount = rows.filter((r) => r.missingFields.length > 0).length;
   const validRows = rows.filter((r) => r.missingFields.length === 0);
+  const aedCount = rows.filter((r) => r.currency === "AED").length;
+
+  const recalcCurrent = () => {
+    if (rows.length === 0) return;
+    setRows(
+      rows.map((r) => {
+        const purchaseToman = r.currency === "AED" ? r.purchase * aedRate : r.purchase;
+        const { finalPrice, commissionAmount } = calcPricing(
+          purchaseToman, r.fixed, r.profit, r.commission,
+        );
+        return { ...r, purchaseToman, finalPrice, commissionAmount };
+      }),
+    );
+    toast.success("جدول با نرخ جدید درهم محاسبه شد");
+  };
 
   const exportCalculated = () => {
     if (rows.length === 0) return;
     const out = rows.map((r) => ({
       "نام محصول": r.name,
       "قیمت خرید": r.purchase,
+      "ارز": r.currency === "AED" ? "درهم" : "تومان",
+      "قیمت خرید (تومان)": Math.round(r.purchaseToman),
       "هزینه ثابت": r.fixed,
       "سود خالص": r.profit,
       "کمیسیون (٪)": r.commission,
@@ -76,13 +105,17 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
     const items: CatalogItem[] = validRows.map((r) => ({
       id: r.id,
       name: r.name,
-      purchase: r.purchase, fixed: r.fixed, profit: r.profit, commission: r.commission,
+      purchaseOriginal: r.purchase,
+      currency: r.currency,
+      aedRateUsed: r.currency === "AED" ? aedRate : 0,
+      purchase: r.purchaseToman,
+      fixed: r.fixed, profit: r.profit, commission: r.commission,
       finalPrice: r.finalPrice, commissionAmount: r.commissionAmount,
       imageUrl: getAutoImageUrl(r.name),
       createdAt: Date.now(),
     }));
     onAddToCatalog(items);
-    toast.success(`${items.length} محصول به کاتالوگ اضافه شد`);
+    toast.success(`${items.length} محصول به لیست اضافه شد`);
   };
 
   return (
@@ -95,7 +128,7 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
           <div className="flex-1 min-w-[200px]">
             <h2 className="text-xl font-bold">بارگذاری انبوه از اکسل / CSV</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              ستون‌های مورد نیاز: نام محصول، قیمت خرید، هزینه ثابت، سود، کمیسیون
+              ستون‌ها: نام محصول، قیمت خرید، ارز (تومان/درهم)، هزینه ثابت، سود، کمیسیون
             </p>
           </div>
         </div>
@@ -122,36 +155,42 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
           >
             <FileDown className="h-6 w-6 text-primary" />
             <span className="font-semibold text-sm">دانلود قالب نمونه</span>
-            <span className="text-xs text-muted-foreground">برای راحتی شروع</span>
+            <span className="text-xs text-muted-foreground">شامل ستون ارز</span>
           </button>
         </div>
       </Card>
 
       {rows.length > 0 && (
         <>
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-4 gap-3">
             <Stat label="کل سطرها" value={rows.length} tone="muted" />
-            <Stat label="سطرهای کامل" value={validRows.length} tone="success" />
-            <Stat label="سطرهای ناقص" value={incompleteCount} tone="destructive" />
+            <Stat label="کامل" value={validRows.length} tone="success" />
+            <Stat label="ناقص" value={incompleteCount} tone="destructive" />
+            <Stat label="درهمی" value={aedCount} tone="muted" />
           </div>
 
           {incompleteCount > 0 && (
             <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {incompleteCount} سطر دارای داده ناقص است و در خروجی به‌عنوان «ناقص» علامت می‌خورد.
+                {incompleteCount} سطر دارای داده ناقص است.
               </AlertDescription>
             </Alert>
           )}
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={exportCalculated} size="lg" className="gap-2">
-              <Download className="h-4 w-4" />
-              دانلود اکسل محاسبه‌شده
-            </Button>
-            <Button onClick={pushToCatalog} size="lg" variant="outline" className="gap-2">
+            <Button onClick={pushToCatalog} size="lg" className="gap-2">
               <Plus className="h-4 w-4" />
-              افزودن همه به کاتالوگ ({validRows.length})
+              افزودن به لیست کالاها ({validRows.length})
+            </Button>
+            {aedCount > 0 && (
+              <Button onClick={recalcCurrent} size="lg" variant="outline" className="gap-2">
+                محاسبه مجدد با نرخ فعلی
+              </Button>
+            )}
+            <Button onClick={exportCalculated} size="lg" variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              دانلود اکسل
             </Button>
             <Button onClick={() => setRows([])} size="lg" variant="ghost">
               پاک‌کردن جدول
@@ -166,12 +205,13 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
                     <Th>وضعیت</Th>
                     <Th>تصویر</Th>
                     <Th>نام محصول</Th>
-                    <Th>خرید</Th>
+                    <Th>قیمت خرید</Th>
+                    <Th>ارز</Th>
+                    <Th>خرید (تومان)</Th>
                     <Th>هزینه ثابت</Th>
                     <Th>سود</Th>
                     <Th>کمیسیون</Th>
                     <Th highlight>قیمت فروش</Th>
-                    <Th>مبلغ کمیسیون</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,11 +237,16 @@ export function BulkManager({ onAddToCatalog }: { onAddToCatalog: (items: Catalo
                         <Td><Thumb name={r.name} /></Td>
                         <Td><span className="font-medium">{r.name || <em className="text-muted-foreground">—</em>}</span></Td>
                         <Td>{formatToman(r.purchase)}</Td>
+                        <Td>
+                          <Badge variant={r.currency === "AED" ? "default" : "secondary"} className="text-[10px]">
+                            {r.currency === "AED" ? "درهم" : "تومان"}
+                          </Badge>
+                        </Td>
+                        <Td>{formatToman(r.purchaseToman)}</Td>
                         <Td>{formatToman(r.fixed)}</Td>
                         <Td>{formatToman(r.profit)}</Td>
                         <Td>{formatToman(r.commission)}٪</Td>
                         <Td highlight>{formatToman(r.finalPrice)}</Td>
-                        <Td>{formatToman(r.commissionAmount)}</Td>
                       </tr>
                     );
                   })}

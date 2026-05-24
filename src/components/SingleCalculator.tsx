@@ -10,11 +10,11 @@ import { Save, TrendingUp, Receipt, Wallet, Package } from "lucide-react";
 import { formatToman, parseNumber } from "@/lib/format";
 import { calcPricing } from "@/lib/pricing";
 import { getAutoImageUrl } from "@/lib/productImage";
-import type { CatalogItem } from "@/hooks/useCatalog";
+import type { CatalogItem, Currency } from "@/hooks/useCatalog";
 
 function NumberField({
-  id, label, value, onChange, placeholder,
-}: { id: string; label: string; value: number; onChange: (v: number) => void; placeholder?: string }) {
+  id, label, value, onChange, placeholder, suffix = "تومان",
+}: { id: string; label: string; value: number; onChange: (v: number) => void; placeholder?: string; suffix?: string }) {
   const [text, setText] = useState(value ? formatToman(value) : "");
   useEffect(() => { setText(value ? formatToman(value) : ""); }, [value]);
   return (
@@ -27,28 +27,33 @@ function NumberField({
           value={text} placeholder={placeholder}
           onChange={(e) => {
             const n = parseNumber(e.target.value);
-            setText(n ? formatToman(n) : e.target.value.replace(/[^\d۰-۹٠-٩,،\s]/g, ""));
+            setText(n ? formatToman(n) : e.target.value.replace(/[^\d۰-۹٠-٩,،\s.]/g, ""));
             onChange(n);
           }}
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-          تومان
+          {suffix}
         </span>
       </div>
     </div>
   );
 }
 
-export function SingleCalculator({ onSave }: { onSave: (item: CatalogItem) => void }) {
+export function SingleCalculator({
+  onSave, aedRate,
+}: { onSave: (item: CatalogItem) => void; aedRate: number }) {
   const [name, setName] = useState("");
+  const [currency, setCurrency] = useState<Currency>("TOMAN");
   const [purchase, setPurchase] = useState(0);
   const [fixed, setFixed] = useState(0);
   const [profit, setProfit] = useState(0);
   const [commission, setCommission] = useState(10);
 
+  const purchaseToman = currency === "AED" ? purchase * aedRate : purchase;
+
   const { finalPrice, commissionAmount, totalCosts, netProfit, valid } = useMemo(
-    () => calcPricing(purchase, fixed, profit, commission),
-    [purchase, fixed, profit, commission],
+    () => calcPricing(purchaseToman, fixed, profit, commission),
+    [purchaseToman, fixed, profit, commission],
   );
 
   const save = () => {
@@ -59,13 +64,17 @@ export function SingleCalculator({ onSave }: { onSave: (item: CatalogItem) => vo
     const item: CatalogItem = {
       id: crypto.randomUUID(),
       name: name.trim(),
-      purchase, fixed, profit, commission,
+      purchaseOriginal: purchase,
+      currency,
+      aedRateUsed: currency === "AED" ? aedRate : 0,
+      purchase: purchaseToman,
+      fixed, profit, commission,
       finalPrice, commissionAmount,
       imageUrl: getAutoImageUrl(name.trim()),
       createdAt: Date.now(),
     };
     onSave(item);
-    toast.success("به کاتالوگ اضافه شد");
+    toast.success("به لیست کالاها اضافه شد");
   };
 
   return (
@@ -85,11 +94,30 @@ export function SingleCalculator({ onSave }: { onSave: (item: CatalogItem) => vo
             />
           </div>
 
-          <NumberField id="purchase" label="قیمت خرید" value={purchase} onChange={setPurchase} placeholder="۰" />
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">ارز قیمت خرید</Label>
+            <div className="grid grid-cols-2 gap-2 h-12">
+              <button type="button" onClick={() => setCurrency("TOMAN")}
+                className={`rounded-md border text-sm font-medium transition ${currency === "TOMAN" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-input hover:bg-accent"}`}>
+                تومان
+              </button>
+              <button type="button" onClick={() => setCurrency("AED")}
+                className={`rounded-md border text-sm font-medium transition ${currency === "AED" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-input hover:bg-accent"}`}>
+                درهم (AED)
+              </button>
+            </div>
+          </div>
+
+          <NumberField
+            id="purchase"
+            label={currency === "AED" ? `قیمت خرید (درهم) — معادل: ${formatToman(purchaseToman)} ت` : "قیمت خرید"}
+            value={purchase} onChange={setPurchase} placeholder="۰"
+            suffix={currency === "AED" ? "درهم" : "تومان"}
+          />
           <NumberField id="fixed" label="هزینه‌های ثابت (بسته‌بندی، ارسال، ...)" value={fixed} onChange={setFixed} placeholder="۰" />
           <NumberField id="profit" label="سود خالص مورد انتظار" value={profit} onChange={setProfit} placeholder="۰" />
 
-          <div className="space-y-3">
+          <div className="space-y-3 md:col-span-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">درصد کمیسیون دیجی‌کالا</Label>
               <span className="text-lg font-bold text-primary tabular-nums">
@@ -106,11 +134,11 @@ export function SingleCalculator({ onSave }: { onSave: (item: CatalogItem) => vo
         <div className="flex flex-wrap gap-3 mt-8">
           <Button onClick={save} size="lg" className="gap-2 flex-1 md:flex-none">
             <Save className="h-4 w-4" />
-            افزودن به کاتالوگ
+            افزودن به لیست کالاها
           </Button>
           <Button
             variant="outline" size="lg"
-            onClick={() => { setName(""); setPurchase(0); setFixed(0); setProfit(0); setCommission(10); }}
+            onClick={() => { setName(""); setPurchase(0); setFixed(0); setProfit(0); setCommission(10); setCurrency("TOMAN"); }}
           >
             پاک‌کردن فرم
           </Button>
