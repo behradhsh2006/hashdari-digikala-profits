@@ -1,17 +1,20 @@
 import * as XLSX from "xlsx";
+import type { Currency } from "@/hooks/useCatalog";
 
 export type RawRow = {
   name: string;
-  purchase: number;
+  purchase: number;       // as entered
+  currency: Currency;
   fixed: number;
   profit: number;
   commission: number;
   missingFields: string[];
 };
 
-const COLUMN_ALIASES: Record<keyof Omit<RawRow, "missingFields">, string[]> = {
+const COLUMN_ALIASES: Record<string, string[]> = {
   name: ["product name", "name", "نام محصول", "محصول", "نام"],
   purchase: ["purchase price", "purchase", "قیمت خرید", "خرید"],
+  currency: ["currency", "ارز", "واحد پول", "واحد"],
   fixed: ["fixed costs", "fixed cost", "fixed", "هزینه ثابت", "هزینه‌های ثابت", "هزینه"],
   profit: ["desired profit", "profit", "سود", "سود خالص", "سود دلخواه"],
   commission: ["commission", "commission %", "کمیسیون", "درصد کمیسیون"],
@@ -30,6 +33,13 @@ function toNumber(v: unknown): number {
     .replace(/[,،\s%٪تومانrial]/gi, "");
   const n = Number(s);
   return isNaN(n) ? 0 : n;
+}
+
+function parseCurrency(v: unknown): Currency {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return "TOMAN";
+  if (/(aed|dirham|درهم|دلار امارات|د\.?ا\.?)/i.test(s)) return "AED";
+  return "TOMAN";
 }
 
 export async function parseSpreadsheet(file: File): Promise<RawRow[]> {
@@ -52,6 +62,7 @@ export async function parseSpreadsheet(file: File): Promise<RawRow[]> {
 
     const name = String(pick("name") ?? "").trim();
     const purchase = toNumber(pick("purchase"));
+    const currency = parseCurrency(pick("currency"));
     const fixed = toNumber(pick("fixed"));
     const profit = toNumber(pick("profit"));
     const commission = toNumber(pick("commission"));
@@ -62,7 +73,7 @@ export async function parseSpreadsheet(file: File): Promise<RawRow[]> {
     if (profit <= 0) missing.push("سود");
     if (commission <= 0 || commission >= 100) missing.push("کمیسیون");
 
-    return { name, purchase, fixed, profit, commission, missingFields: missing };
+    return { name, purchase, currency, fixed, profit, commission, missingFields: missing };
   });
 }
 
@@ -81,13 +92,15 @@ export function downloadTemplate() {
     {
       "نام محصول": "هدفون بلوتوثی",
       "قیمت خرید": 500000,
+      "ارز": "تومان",
       "هزینه ثابت": 30000,
       "سود": 150000,
       "کمیسیون": 12,
     },
     {
-      "نام محصول": "ساعت هوشمند",
-      "قیمت خرید": 1200000,
+      "نام محصول": "ساعت هوشمند وارداتی",
+      "قیمت خرید": 120,
+      "ارز": "درهم",
       "هزینه ثابت": 50000,
       "سود": 300000,
       "کمیسیون": 8,
