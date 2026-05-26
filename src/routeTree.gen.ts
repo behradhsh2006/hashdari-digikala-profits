@@ -13,10 +13,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSerialsRouteImport } from './routes/_authenticated/serials'
 import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
+import { Route as AuthenticatedFinancialsRouteImport } from './routes/_authenticated/financials'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCommitmentsRouteImport } from './routes/_authenticated/commitments'
 import { Route as AuthenticatedBulkRouteImport } from './routes/_authenticated/bulk'
 
 const LoginRoute = LoginRouteImport.update({
@@ -38,6 +41,11 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSerialsRoute = AuthenticatedSerialsRouteImport.update({
   id: '/serials',
   path: '/serials',
@@ -53,11 +61,22 @@ const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedFinancialsRoute = AuthenticatedFinancialsRouteImport.update({
+  id: '/financials',
+  path: '/financials',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCommitmentsRoute =
+  AuthenticatedCommitmentsRouteImport.update({
+    id: '/commitments',
+    path: '/commitments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBulkRoute = AuthenticatedBulkRouteImport.update({
   id: '/bulk',
   path: '/bulk',
@@ -68,20 +87,26 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/bulk': typeof AuthenticatedBulkRoute
+  '/commitments': typeof AuthenticatedCommitmentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/financials': typeof AuthenticatedFinancialsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/serials': typeof AuthenticatedSerialsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/bulk': typeof AuthenticatedBulkRoute
+  '/commitments': typeof AuthenticatedCommitmentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/financials': typeof AuthenticatedFinancialsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/serials': typeof AuthenticatedSerialsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
 }
 export interface FileRoutesById {
@@ -90,10 +115,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/bulk': typeof AuthenticatedBulkRoute
+  '/_authenticated/commitments': typeof AuthenticatedCommitmentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/financials': typeof AuthenticatedFinancialsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/serials': typeof AuthenticatedSerialsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
 }
 export interface FileRouteTypes {
@@ -102,20 +130,26 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/bulk'
+    | '/commitments'
     | '/dashboard'
+    | '/financials'
     | '/inventory'
     | '/pricing'
     | '/serials'
+    | '/settings'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/bulk'
+    | '/commitments'
     | '/dashboard'
+    | '/financials'
     | '/inventory'
     | '/pricing'
     | '/serials'
+    | '/settings'
     | '/users'
   id:
     | '__root__'
@@ -123,10 +157,13 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/bulk'
+    | '/_authenticated/commitments'
     | '/_authenticated/dashboard'
+    | '/_authenticated/financials'
     | '/_authenticated/inventory'
     | '/_authenticated/pricing'
     | '/_authenticated/serials'
+    | '/_authenticated/settings'
     | '/_authenticated/users'
   fileRoutesById: FileRoutesById
 }
@@ -166,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/serials': {
       id: '/_authenticated/serials'
       path: '/serials'
@@ -187,11 +231,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInventoryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/financials': {
+      id: '/_authenticated/financials'
+      path: '/financials'
+      fullPath: '/financials'
+      preLoaderRoute: typeof AuthenticatedFinancialsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/commitments': {
+      id: '/_authenticated/commitments'
+      path: '/commitments'
+      fullPath: '/commitments'
+      preLoaderRoute: typeof AuthenticatedCommitmentsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/bulk': {
@@ -206,19 +264,25 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedBulkRoute: typeof AuthenticatedBulkRoute
+  AuthenticatedCommitmentsRoute: typeof AuthenticatedCommitmentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFinancialsRoute: typeof AuthenticatedFinancialsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedSerialsRoute: typeof AuthenticatedSerialsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBulkRoute: AuthenticatedBulkRoute,
+  AuthenticatedCommitmentsRoute: AuthenticatedCommitmentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFinancialsRoute: AuthenticatedFinancialsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedSerialsRoute: AuthenticatedSerialsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
 }
 
