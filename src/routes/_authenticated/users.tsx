@@ -60,7 +60,6 @@ function Inner() {
               }}
             />
           </DialogContent>
-        </DialogContent>
         </Dialog>
       </div>
 
