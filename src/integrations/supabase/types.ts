@@ -14,16 +14,236 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_credentials: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credential_key: string
+          credential_value: string
+          id: string
+          label: string
+          notes: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credential_key: string
+          credential_value: string
+          id?: string
+          label: string
+          notes?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credential_key?: string
+          credential_value?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          brand: string | null
+          commission_percent: number
+          cost_original: number
+          created_at: string
+          currency: string
+          digikala_dkp: string | null
+          fixed_costs: number
+          id: string
+          image_url: string | null
+          model: string | null
+          name: string
+          owner_id: string
+          profit_percent: number
+          sku: string | null
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          commission_percent?: number
+          cost_original?: number
+          created_at?: string
+          currency?: string
+          digikala_dkp?: string | null
+          fixed_costs?: number
+          id?: string
+          image_url?: string | null
+          model?: string | null
+          name: string
+          owner_id: string
+          profit_percent?: number
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          commission_percent?: number
+          cost_original?: number
+          created_at?: string
+          currency?: string
+          digikala_dkp?: string | null
+          fixed_costs?: number
+          id?: string
+          image_url?: string | null
+          model?: string | null
+          name?: string
+          owner_id?: string
+          profit_percent?: number
+          sku?: string | null
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sale_transactions: {
+        Row: {
+          cogs: number
+          commission: number
+          created_at: string
+          fixed_costs: number
+          gross_revenue: number
+          id: string
+          net_profit: number
+          occurred_at: string
+          owner_id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          status: string
+        }
+        Insert: {
+          cogs?: number
+          commission?: number
+          created_at?: string
+          fixed_costs?: number
+          gross_revenue?: number
+          id?: string
+          net_profit?: number
+          occurred_at?: string
+          owner_id: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          status?: string
+        }
+        Update: {
+          cogs?: number
+          commission?: number
+          created_at?: string
+          fixed_costs?: number
+          gross_revenue?: number
+          id?: string
+          net_profit?: number
+          occurred_at?: string
+          owner_id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "manager" | "warehouse" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "manager", "warehouse", "viewer"],
+    },
   },
 } as const
