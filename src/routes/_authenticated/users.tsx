@@ -1,163 +1,95 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, ShieldCheck, UserCog } from "lucide-react";
-import { useAuth, type AppUser } from "@/hooks/useAuth";
-import { ROLE_LABELS, type Role } from "@/lib/permissions";
-import { toJalaliShort } from "@/lib/jalali";
+import { Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
+import { ROLE_LABELS, type Role } from "@/lib/permissions";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/users")({
   head: () => ({ meta: [{ title: "مدیریت کاربران — سرفیس استور" }] }),
-  component: UsersPage,
+  component: () => <PermissionGate perm="manage_users"><Inner /></PermissionGate>,
 });
 
-function UsersPage() {
-  return (
-    <PermissionGate perm="manage_users">
-      <Inner />
-    </PermissionGate>
-  );
-}
+type Row = { id: string; display_name: string | null; role: Role };
 
 function Inner() {
-  const { users, user: me, createUser, deleteUser, updateUser } = useAuth();
-  const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: profiles }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("id, display_name"),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
+    const order: Role[] = ["super_admin", "manager", "warehouse", "viewer"];
+    const merged: Row[] = (profiles ?? []).map((p) => {
+      const userRoles = (roles ?? []).filter((r) => r.user_id === p.id).map((r) => r.role as Role);
+      const role: Role = order.find((r) => userRoles.includes(r)) ?? "viewer";
+      return { id: p.id, display_name: p.display_name, role };
+    });
+    setRows(merged);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const updateRole = async (uid: string, newRole: Role) => {
+    // Replace all roles with the single new one
+    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", uid);
+    if (delErr) return toast.error(delErr.message);
+    const { error } = await supabase.from("user_roles").insert({ user_id: uid, role: newRole });
+    if (error) return toast.error(error.message);
+    toast.success("نقش به‌روزرسانی شد");
+    load();
+  };
 
   return (
-    <div className="space-y-5 max-w-5xl">
-      <Card className="p-5 flex items-start gap-3 border-primary/20 bg-primary/5">
-        <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
-        <div className="text-sm">
-          <p className="font-bold">پنل مدیریت کاربران</p>
+    <div className="space-y-6 max-w-5xl">
+      <Card className="p-5 text-sm border-primary/20 bg-primary/5 flex items-start gap-3">
+        <Users className="h-5 w-5 text-primary mt-0.5" />
+        <div>
+          <p className="font-bold">مدیریت کاربران و نقش‌ها</p>
           <p className="text-muted-foreground mt-1">
-            این بخش فقط برای «مدیر ارشد» قابل دسترسی است. ایجاد کاربر، تعیین نقش و دسترسی‌ها از اینجا انجام می‌شود.
+            ثبت‌نام از طریق صفحه ورود انجام می‌شود. در اینجا فقط می‌توانید نقش هر کاربر را تغییر دهید.
           </p>
         </div>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{users.length} کاربر در سیستم</p>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" /> افزودن کاربر</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>ایجاد کاربر جدید</DialogTitle></DialogHeader>
-            <UserForm
-              onSubmit={(data) => {
-                const r = createUser(data);
-                if (!r.ok) return toast.error(r.error ?? "خطا");
-                setOpen(false);
-                toast.success("کاربر ساخته شد");
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary text-secondary-foreground">
-              <tr>
-                <th className="text-right px-3 py-3 text-xs font-semibold">نام کاربری</th>
-                <th className="text-right px-3 py-3 text-xs font-semibold">نام نمایشی</th>
-                <th className="text-right px-3 py-3 text-xs font-semibold">نقش</th>
-                <th className="text-right px-3 py-3 text-xs font-semibold">تاریخ ایجاد</th>
-                <th className="text-right px-3 py-3 text-xs font-semibold">عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-t">
-                  <td className="px-3 py-2.5"><code className="text-xs font-bold">{u.username}</code>
-                    {me?.id === u.id && <Badge variant="secondary" className="ms-2 text-[10px]">شما</Badge>}
-                  </td>
-                  <td className="px-3 py-2.5">{u.displayName}</td>
-                  <td className="px-3 py-2.5">
-                    <Select value={u.role} onValueChange={(v) => updateUser(u.id, { role: v as Role })}
-                      disabled={me?.id === u.id}>
-                      <SelectTrigger className="h-8 text-xs w-36"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(ROLE_LABELS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-3 py-2.5 text-xs tabular-nums">{toJalaliShort(u.createdAt)}</td>
-                  <td className="px-3 py-2.5">
-                    <Button size="icon" variant="ghost" className="text-destructive"
-                      disabled={me?.id === u.id}
-                      onClick={() => { if (confirm(`حذف ${u.username}؟`)) { deleteUser(u.id); toast.success("حذف شد"); } }}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card className="p-5 text-sm text-muted-foreground border-dashed flex items-start gap-3">
-        <UserCog className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-        <div>
-          <p className="font-semibold text-foreground">دسترسی‌های نقش‌ها</p>
-          <ul className="mt-2 space-y-1 text-xs leading-relaxed">
-            <li>• <b>مدیر ارشد:</b> دسترسی کامل به همه بخش‌ها شامل کاربران، تنظیمات و گزارش مالی.</li>
-            <li>• <b>مدیر:</b> همه بخش‌ها به جز مدیریت کاربران و تنظیمات API.</li>
-            <li>• <b>کارمند انبار:</b> فقط محصولات، سریال‌ها، تعهدات و داشبورد (بدون اطلاعات مالی).</li>
-            <li>• <b>بازدیدکننده:</b> مشاهده‌ی محصولات و سریال‌ها به‌صورت فقط‌خواندنی.</li>
-          </ul>
-        </div>
+      <Card className="p-4">
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> در حال بارگذاری...</div>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">کاربری ثبت نشده است.</p>
+        ) : (
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">{r.display_name || "بدون نام"}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono ltr-content text-left">{r.id.slice(0, 8)}…</p>
+                </div>
+                {r.id === user?.id && <Badge variant="secondary">شما</Badge>}
+                <Select value={r.role} onValueChange={(v) => updateRole(r.id, v as Role)} disabled={r.id === user?.id}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(ROLE_LABELS) as Role[]).map((role) => (
+                      <SelectItem key={role} value={role}>{ROLE_LABELS[role]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
-  );
-}
-
-function UserForm({ onSubmit }: { onSubmit: (data: Omit<AppUser, "id" | "createdAt">) => void }) {
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<Role>("warehouse");
-  const [password, setPassword] = useState("");
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({ username: username.trim(), displayName: displayName.trim() || username.trim(), role, password });
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label className="text-xs">نام کاربری</Label>
-          <Input value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" placeholder="username" /></div>
-        <div className="space-y-1.5"><Label className="text-xs">نام نمایشی</Label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="نام و نام خانوادگی" /></div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label className="text-xs">رمز عبور</Label>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" /></div>
-        <div className="space-y-1.5"><Label className="text-xs">نقش</Label>
-          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex justify-end pt-2"><Button type="submit" size="lg">ایجاد کاربر</Button></div>
-    </form>
   );
 }
