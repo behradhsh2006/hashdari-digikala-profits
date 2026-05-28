@@ -19,6 +19,7 @@ export type Permission =
   | "view_commitments"
   | "manage_users"
   | "manage_settings"
+  | "manage_vault"
   | "bulk_import"
   | "export_data";
 
@@ -26,7 +27,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   super_admin: [
     "view_dashboard", "view_inventory", "edit_inventory", "view_serials", "edit_serials",
     "view_pricing", "edit_pricing", "view_financials", "view_commitments",
-    "manage_users", "manage_settings", "bulk_import", "export_data",
+    "manage_users", "manage_settings", "manage_vault", "bulk_import", "export_data",
   ],
   manager: [
     "view_dashboard", "view_inventory", "edit_inventory", "view_serials", "edit_serials",
