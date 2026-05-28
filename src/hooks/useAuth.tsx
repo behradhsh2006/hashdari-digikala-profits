@@ -1,108 +1,94 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import type { Role, Permission } from "@/lib/permissions";
 import { hasPermission } from "@/lib/permissions";
 
 export type AppUser = {
   id: string;
-  username: string;
+  email: string;
   displayName: string;
   role: Role;
-  /** Mock password (LocalStorage only — replace with real auth via Lovable Cloud). */
-  password: string;
-  createdAt: number;
 };
-
-const USERS_KEY = "app-users-v1";
-const SESSION_KEY = "app-session-v1";
-
-const DEFAULT_USERS: AppUser[] = [
-  { id: "u-admin", username: "admin", displayName: "مدیر سیستم", role: "super_admin", password: "admin", createdAt: Date.now() },
-  { id: "u-staff", username: "staff", displayName: "کارمند انبار", role: "warehouse", password: "staff", createdAt: Date.now() },
-];
-
-function loadUsers(): AppUser[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_USERS));
-  return DEFAULT_USERS;
-}
-function saveUsers(users: AppUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
 
 type AuthCtx = {
   ready: boolean;
+  session: Session | null;
   user: AppUser | null;
-  users: AppUser[];
-  login: (username: string, password: string) => { ok: true } | { ok: false; error: string };
-  logout: () => void;
+  signIn: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signInWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
   can: (perm: Permission) => boolean;
-  // user management (admin)
-  createUser: (data: Omit<AppUser, "id" | "createdAt">) => { ok: boolean; error?: string };
-  updateUser: (id: string, patch: Partial<Omit<AppUser, "id">>) => void;
-  deleteUser: (id: string) => void;
+  refresh: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+async function loadAppUser(u: User): Promise<AppUser> {
+  const [{ data: profile }, { data: roles }] = await Promise.all([
+    supabase.from("profiles").select("display_name").eq("id", u.id).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", u.id),
+  ]);
+  // Highest role priority
+  const order: Role[] = ["super_admin", "manager", "warehouse", "viewer"];
+  const userRoles = (roles ?? []).map((r) => r.role as Role);
+  const role: Role = order.find((r) => userRoles.includes(r)) ?? "viewer";
+  return {
+    id: u.id,
+    email: u.email ?? "",
+    displayName: profile?.display_name ?? u.email?.split("@")[0] ?? "کاربر",
+    role,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
-  const [users, setUsers] = useState<AppUser[]>([]);
 
-  useEffect(() => {
-    const all = loadUsers();
-    setUsers(all);
-    try {
-      const sid = localStorage.getItem(SESSION_KEY);
-      if (sid) {
-        const u = all.find((x) => x.id === sid) ?? null;
-        setUser(u);
-      }
-    } catch {}
-    setReady(true);
-  }, []);
-
-  const persistUsers = (next: AppUser[]) => {
-    setUsers(next);
-    saveUsers(next);
+  const hydrate = async (s: Session | null) => {
+    setSession(s);
+    if (s?.user) {
+      try { setUser(await loadAppUser(s.user)); } catch { setUser(null); }
+    } else setUser(null);
   };
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      // Defer DB calls to avoid deadlock
+      setSession(s);
+      if (s?.user) {
+        setTimeout(() => { loadAppUser(s.user).then(setUser).catch(() => setUser(null)); }, 0);
+      } else setUser(null);
+    });
+    supabase.auth.getSession().then(({ data }) => hydrate(data.session)).finally(() => setReady(true));
+    return () => subscription.unsubscribe();
+  }, []);
+
   const value: AuthCtx = {
-    ready,
-    user,
-    users,
-    login: (username, password) => {
-      const u = users.find((x) => x.username.toLowerCase() === username.trim().toLowerCase());
-      if (!u || u.password !== password) return { ok: false, error: "نام کاربری یا رمز عبور اشتباه است" };
-      localStorage.setItem(SESSION_KEY, u.id);
-      setUser(u);
-      return { ok: true };
+    ready, session, user,
+    signIn: async (email, password) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return error ? { ok: false, error: error.message } : { ok: true };
     },
-    logout: () => {
-      localStorage.removeItem(SESSION_KEY);
-      setUser(null);
+    signUp: async (email, password, displayName) => {
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: redirectUrl, data: { display_name: displayName } },
+      });
+      return error ? { ok: false, error: error.message } : { ok: true };
     },
+    signInWithGoogle: async () => {
+      const { lovable } = await import("@/integrations/lovable");
+      await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    },
+    logout: async () => { await supabase.auth.signOut(); },
     can: (perm) => hasPermission(user?.role, perm),
-    createUser: (data) => {
-      if (!data.username.trim()) return { ok: false, error: "نام کاربری الزامی است" };
-      if (users.some((x) => x.username.toLowerCase() === data.username.toLowerCase()))
-        return { ok: false, error: "این نام کاربری قبلاً ثبت شده است" };
-      if (!data.password || data.password.length < 3) return { ok: false, error: "رمز عبور حداقل ۳ نویسه" };
-      const next: AppUser = { ...data, id: `u-${crypto.randomUUID()}`, createdAt: Date.now() };
-      persistUsers([next, ...users]);
-      return { ok: true };
-    },
-    updateUser: (id, patch) => {
-      const next = users.map((u) => (u.id === id ? { ...u, ...patch } : u));
-      persistUsers(next);
-      if (user?.id === id) setUser({ ...user, ...patch } as AppUser);
-    },
-    deleteUser: (id) => {
-      if (user?.id === id) return; // cannot delete self
-      persistUsers(users.filter((u) => u.id !== id));
+    refresh: async () => {
+      const { data } = await supabase.auth.getSession();
+      await hydrate(data.session);
     },
   };
 
