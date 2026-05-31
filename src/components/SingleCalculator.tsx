@@ -121,7 +121,7 @@ export function SingleCalculator({
             }}
             placeholder="۰"
             suffix={currency === "AED" ? "درهم" : "تومان"}
-            max={currency === "AED" ? 1000 : undefined}
+
           />
 
           <NumberField id="fixed" label="هزینه‌های ثابت (بسته‌بندی، ارسال، ...)" value={fixed} onChange={setFixed} placeholder="۰" />
