@@ -110,9 +110,20 @@ export function SingleCalculator({
           <NumberField
             id="purchase"
             label={currency === "AED" ? `قیمت خرید (درهم) — معادل: ${formatToman(purchaseToman)} ت` : "قیمت خرید"}
-            value={purchase} onChange={setPurchase} placeholder="۰"
+            value={purchase}
+            onChange={(v) => {
+              if (currency === "AED" && v > 1000) {
+                toast.warning("حداکثر مبلغ مجاز وارد شده ۱۰۰۰ درهم می‌باشد");
+                setPurchase(1000);
+                return;
+              }
+              setPurchase(v);
+            }}
+            placeholder="۰"
             suffix={currency === "AED" ? "درهم" : "تومان"}
+            max={currency === "AED" ? 1000 : undefined}
           />
+
           <NumberField id="fixed" label="هزینه‌های ثابت (بسته‌بندی، ارسال، ...)" value={fixed} onChange={setFixed} placeholder="۰" />
 
           <div className="space-y-3">
