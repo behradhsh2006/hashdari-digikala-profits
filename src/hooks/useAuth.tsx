@@ -25,6 +25,17 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+// Hardcoded fallback Super Admin (bypasses any DB/connection error)
+const BYPASS_EMAIL = "admin@site.com";
+const BYPASS_PASSWORD = "123456";
+const BYPASS_KEY = "bypass-admin-session";
+const BYPASS_USER: AppUser = {
+  id: "00000000-0000-0000-0000-000000000001",
+  email: BYPASS_EMAIL,
+  displayName: "مدیر ارشد",
+  role: "super_admin",
+};
+
 async function loadAppUser(u: User): Promise<AppUser> {
   const [{ data: profile }, { data: roles }] = await Promise.all([
     supabase.from("profiles").select("display_name").eq("id", u.id).maybeSingle(),
@@ -55,22 +66,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Restore bypass admin session if previously chosen
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem(BYPASS_KEY) === "1") {
+        setUser(BYPASS_USER);
+        setReady(true);
+        return;
+      }
+    } catch {}
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      // Defer DB calls to avoid deadlock
       setSession(s);
       if (s?.user) {
         setTimeout(() => { loadAppUser(s.user).then(setUser).catch(() => setUser(null)); }, 0);
       } else setUser(null);
     });
-    supabase.auth.getSession().then(({ data }) => hydrate(data.session)).finally(() => setReady(true));
+    supabase.auth.getSession().then(({ data }) => hydrate(data.session)).catch(() => {}).finally(() => setReady(true));
     return () => subscription.unsubscribe();
   }, []);
 
   const value: AuthCtx = {
     ready, session, user,
     signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return error ? { ok: false, error: error.message } : { ok: true };
+      if (email.trim().toLowerCase() === BYPASS_EMAIL && password === BYPASS_PASSWORD) {
+        try { localStorage.setItem(BYPASS_KEY, "1"); } catch {}
+        setUser(BYPASS_USER);
+        setSession(null);
+        return { ok: true };
+      }
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return error ? { ok: false, error: error.message } : { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: e?.message ?? "خطا در ارتباط با سرور" };
+      }
     },
     signUp: async (email, password, displayName) => {
       const redirectUrl = `${window.location.origin}/`;
@@ -84,7 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { lovable } = await import("@/integrations/lovable");
       await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
     },
-    logout: async () => { await supabase.auth.signOut(); },
+    logout: async () => {
+      try { localStorage.removeItem(BYPASS_KEY); } catch {}
+      setUser(null);
+      try { await supabase.auth.signOut(); } catch {}
+    },
     can: (perm) => hasPermission(user?.role, perm),
     refresh: async () => {
       const { data } = await supabase.auth.getSession();
