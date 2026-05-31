@@ -23,12 +23,12 @@ export function ProductList({ items, onUpdate, onRemove, onClear }: Props) {
       "قیمت خرید": p.purchaseOriginal,
       "ارز": p.currency === "AED" ? "درهم" : "تومان",
       "نرخ درهم": p.currency === "AED" ? p.aedRateUsed : "",
-      "قیمت خرید (تومان)": Math.round(p.purchase),
+      "قیمت خرید (تومان)": p.purchase,
       "هزینه ثابت": p.fixed,
       "سود خالص": p.profit,
       "کمیسیون (٪)": p.commission,
-      "قیمت فروش نهایی": Math.round(p.finalPrice),
-      "مبلغ کمیسیون": Math.round(p.commissionAmount),
+      "قیمت فروش نهایی": p.finalPrice,
+      "مبلغ کمیسیون": p.commissionAmount,
       "تاریخ": new Date(p.createdAt).toLocaleDateString("fa-IR"),
     }));
     downloadExcel(out, `لیست-کالاها-${Date.now()}.xlsx`);
