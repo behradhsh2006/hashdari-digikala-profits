@@ -140,16 +140,32 @@ export function SingleCalculator({
 
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">درصد کمیسیون دیجی‌کالا</Label>
-              <span className="text-lg font-bold text-primary tabular-nums">
-                {formatToman(commission)}٪
+              <Label htmlFor="commissionPct" className="text-sm font-medium">
+                خلاصه کمیسیون دیجی‌کالا
+              </Label>
+              <span className="text-sm font-bold text-primary tabular-nums">
+                {formatToman(commissionAmount)} ت
               </span>
             </div>
-            <Slider value={[commission]} onValueChange={(v) => setCommission(v[0])} min={0} max={30} step={0.5} />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>۰٪</span><span>۱۵٪</span><span>۳۰٪</span>
+            <div className="relative">
+              <Input
+                id="commissionPct" inputMode="decimal" dir="ltr"
+                className="text-left pr-12 h-12 text-base"
+                value={commission === 0 ? "" : String(commission)}
+                placeholder="۱۰"
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, "");
+                  const n = parseFloat(v);
+                  setCommission(isNaN(n) ? 0 : n);
+                }}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">٪</span>
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              درصد کمیسیون اعلام‌شده توسط دیجی‌کالا را وارد کنید (مثلاً ۱۰).
+            </p>
           </div>
+
         </div>
 
         <div className="flex flex-wrap gap-3 mt-8">
