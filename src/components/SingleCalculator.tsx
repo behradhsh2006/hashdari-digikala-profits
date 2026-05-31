@@ -68,7 +68,7 @@ export function SingleCalculator({
       currency,
       aedRateUsed: currency === "AED" ? aedRate : 0,
       purchase: purchaseToman,
-      fixed, profit, commission,
+      fixed, profit: profitPercent, commission,
       finalPrice, commissionAmount,
       imageUrl: getAutoImageUrl(name.trim()),
       createdAt: Date.now(),
@@ -115,7 +115,29 @@ export function SingleCalculator({
             suffix={currency === "AED" ? "درهم" : "تومان"}
           />
           <NumberField id="fixed" label="هزینه‌های ثابت (بسته‌بندی، ارسال، ...)" value={fixed} onChange={setFixed} placeholder="۰" />
-          <NumberField id="profit" label="سود خالص مورد انتظار" value={profit} onChange={setProfit} placeholder="۰" />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="profitPct" className="text-sm font-medium">سود مورد نظر (٪)</Label>
+              <span className="text-sm font-bold text-success tabular-nums">
+                {formatToman(profitAmount)} ت
+              </span>
+            </div>
+            <div className="relative">
+              <Input
+                id="profitPct" inputMode="decimal" dir="ltr"
+                className="text-left pr-12 h-12 text-base"
+                value={profitPercent === 0 ? "" : String(profitPercent)}
+                placeholder="۲۰"
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, "");
+                  const n = parseFloat(v);
+                  setProfitPercent(isNaN(n) ? 0 : n);
+                }}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">٪</span>
+            </div>
+          </div>
 
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center justify-between">
@@ -138,7 +160,7 @@ export function SingleCalculator({
           </Button>
           <Button
             variant="outline" size="lg"
-            onClick={() => { setName(""); setPurchase(0); setFixed(0); setProfit(0); setCommission(10); setCurrency("TOMAN"); }}
+            onClick={() => { setName(""); setPurchase(0); setFixed(0); setProfitPercent(20); setCommission(10); setCurrency("TOMAN"); }}
           >
             پاک‌کردن فرم
           </Button>
