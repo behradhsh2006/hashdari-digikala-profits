@@ -113,7 +113,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
     },
     logout: async () => {
-      try { localStorage.removeItem(BYPASS_KEY); } catch {}
+      try {
+        // Clear all locally-cached business data so the next user on this
+        // device cannot see the previous user's inventory/catalog/credentials.
+        const SENSITIVE_KEYS = [
+          BYPASS_KEY,
+          "app-integrations-v1",
+          "digikala-catalog-v3",
+          "inv-products-v1",
+          "inv-serials-v1",
+        ];
+        for (const k of SENSITIVE_KEYS) localStorage.removeItem(k);
+      } catch {}
       setUser(null);
       try { await supabase.auth.signOut(); } catch {}
     },
