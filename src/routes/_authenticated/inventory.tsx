@@ -46,7 +46,7 @@ function Inner() {
       "نام": p.name, "برند": p.brand, "مدل": p.model, "SKU": p.sku,
       "CPU": p.cpu ?? "", "RAM": p.ram ?? "", "Storage": p.storage ?? "", "رنگ": p.color ?? "",
       "قیمت خرید": p.costPrice, "ارز": p.currency === "AED" ? "درهم" : "تومان",
-      "قیمت خرید (تومان)": Math.round(p.currency === "AED" ? p.costPrice * rate : p.costPrice),
+      "قیمت خرید (تومان)": (p.currency === "AED" ? p.costPrice * rate : p.costPrice),
       "قیمت پایه فروش": p.basePrice,
       "حداقل موجودی": p.reorderThreshold,
       "موجودی فعلی": inv.stockCount(p.id),

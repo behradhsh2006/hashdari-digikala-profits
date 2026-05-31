@@ -1,6 +1,10 @@
-export const formatToman = (n: number) => {
+export const formatToman = (n: number, maxDecimals = 2) => {
   if (!isFinite(n) || isNaN(n)) return "۰";
-  return new Intl.NumberFormat("fa-IR").format(Math.round(n));
+  return new Intl.NumberFormat("fa-IR", {
+    maximumFractionDigits: maxDecimals,
+    minimumFractionDigits: 0,
+    useGrouping: true,
+  }).format(n);
 };
 
 export const parseNumber = (s: string): number => {
