@@ -46,14 +46,14 @@ export function SingleCalculator({
   const [currency, setCurrency] = useState<Currency>("TOMAN");
   const [purchase, setPurchase] = useState(0);
   const [fixed, setFixed] = useState(0);
-  const [profit, setProfit] = useState(0);
+  const [profitPercent, setProfitPercent] = useState(20);
   const [commission, setCommission] = useState(10);
 
   const purchaseToman = currency === "AED" ? purchase * aedRate : purchase;
 
-  const { finalPrice, commissionAmount, totalCosts, netProfit, valid } = useMemo(
-    () => calcPricing(purchaseToman, fixed, profit, commission),
-    [purchaseToman, fixed, profit, commission],
+  const { finalPrice, commissionAmount, totalCosts, netProfit, profitAmount, valid } = useMemo(
+    () => calcPricing(purchaseToman, fixed, profitPercent, commission),
+    [purchaseToman, fixed, profitPercent, commission],
   );
 
   const save = () => {
