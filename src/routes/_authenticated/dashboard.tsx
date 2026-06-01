@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
-import { Package, AlertTriangle, Wallet, Barcode, TrendingUp } from "lucide-react";
+import { Package, AlertTriangle, Wallet, Barcode, TrendingUp, ShoppingCart, Truck, Clock } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useAedRate } from "@/hooks/useAedRate";
 import { formatToman } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
+import { useDailyOrders } from "@/hooks/useOrdersApi";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
