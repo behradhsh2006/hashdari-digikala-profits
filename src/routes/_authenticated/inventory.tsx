@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Download, Pencil, AlertTriangle, Package } from "lucide-react";
+import { Plus, Trash2, Download, Pencil, AlertTriangle, Package, Upload, Loader2 } from "lucide-react";
 import { useInventory, type Product } from "@/hooks/useInventory";
 import { useAedRate } from "@/hooks/useAedRate";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,7 @@ import { formatToman, parseNumber } from "@/lib/format";
 import { downloadExcel } from "@/lib/excel";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
+import { bulkPushPrices } from "@/lib/digikalaApi";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
   head: () => ({ meta: [{ title: "محصولات — سرفیس استور" }] }),
@@ -35,6 +36,7 @@ function Inner() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Product | null>(null);
+  const [pushing, setPushing] = useState(false);
 
   const filtered = inv.products.filter((p) =>
     [p.name, p.brand, p.model, p.sku].join(" ").toLowerCase().includes(q.toLowerCase()),
@@ -55,6 +57,25 @@ function Inner() {
     toast.success("اکسل دانلود شد");
   };
 
+  const pushPrices = async () => {
+    const items = filtered
+      .filter((p) => p.sku && p.basePrice > 0)
+      .map((p) => ({ variantId: p.sku, priceToman: p.basePrice, stock: inv.stockCount(p.id) }));
+    if (items.length === 0) return toast.error("محصول قابل ارسال یافت نشد (SKU/قیمت لازم است)");
+    setPushing(true);
+    try {
+      const res = await bulkPushPrices(items);
+      const ok = res.filter((r) => r.ok).length;
+      const fail = res.length - ok;
+      if (fail === 0) toast.success(`${ok} قیمت با موفقیت به دیجی‌کالا ارسال شد`);
+      else toast.warning(`${ok} موفق، ${fail} ناموفق — کلیدها و SKU را بررسی کنید`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "خطا در ارسال قیمت‌ها");
+    } finally {
+      setPushing(false);
+    }
+  };
+
   return (
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-wrap items-center gap-3">
@@ -64,6 +85,12 @@ function Inner() {
         {can("export_data") && (
           <Button variant="outline" onClick={exportXlsx} className="gap-2">
             <Download className="h-4 w-4" /> دانلود اکسل
+          </Button>
+        )}
+        {can("edit_inventory") && (
+          <Button variant="outline" onClick={pushPrices} disabled={pushing} className="gap-2">
+            {pushing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            ارسال قیمت‌ها به دیجی‌کالا
           </Button>
         )}
         {can("edit_inventory") && (
