@@ -57,7 +57,24 @@ function Inner() {
     toast.success("اکسل دانلود شد");
   };
 
-  return (
+  const pushPrices = async () => {
+    const items = filtered
+      .filter((p) => p.sku && p.basePrice > 0)
+      .map((p) => ({ variantId: p.sku, priceToman: p.basePrice, stock: inv.stockCount(p.id) }));
+    if (items.length === 0) return toast.error("محصول قابل ارسال یافت نشد (SKU/قیمت لازم است)");
+    setPushing(true);
+    try {
+      const res = await bulkPushPrices(items);
+      const ok = res.filter((r) => r.ok).length;
+      const fail = res.length - ok;
+      if (fail === 0) toast.success(`${ok} قیمت با موفقیت به دیجی‌کالا ارسال شد`);
+      else toast.warning(`${ok} موفق، ${fail} ناموفق — کلیدها و SKU را بررسی کنید`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "خطا در ارسال قیمت‌ها");
+    } finally {
+      setPushing(false);
+    }
+  };
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-wrap items-center gap-3">
         <Input placeholder="جستجو در نام، برند، مدل، SKU..." value={q} onChange={(e) => setQ(e.target.value)}
