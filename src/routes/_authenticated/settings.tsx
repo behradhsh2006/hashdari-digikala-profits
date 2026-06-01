@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, KeyRound, Globe, Loader2, ShieldCheck } from "lucide-react";
+import { KeyRound, Globe, Loader2, ShieldCheck, PackageSearch, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrdersConfig, testOrdersConnection } from "@/hooks/useOrdersApi";
 
 const PROVIDER = "integrations";
 
