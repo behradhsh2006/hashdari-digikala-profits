@@ -19,6 +19,7 @@ function Dashboard() {
   const { items: catalog } = useCatalog();
   const { rate } = useAedRate();
   const { can, user } = useAuth();
+  const orders = useDailyOrders();
 
   const inStock = serials.filter((s) => s.status === "in_stock").length;
   const sold = serials.filter((s) => s.status === "sold").length;
