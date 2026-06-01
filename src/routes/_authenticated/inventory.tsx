@@ -36,6 +36,7 @@ function Inner() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Product | null>(null);
+  const [pushing, setPushing] = useState(false);
 
   const filtered = inv.products.filter((p) =>
     [p.name, p.brand, p.model, p.sku].join(" ").toLowerCase().includes(q.toLowerCase()),
