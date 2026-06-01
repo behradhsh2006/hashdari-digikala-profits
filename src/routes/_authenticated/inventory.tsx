@@ -88,6 +88,12 @@ function Inner() {
           </Button>
         )}
         {can("edit_inventory") && (
+          <Button variant="outline" onClick={pushPrices} disabled={pushing} className="gap-2">
+            {pushing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            ارسال قیمت‌ها به دیجی‌کالا
+          </Button>
+        )}
+        {can("edit_inventory") && (
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEdit(null); }}>
             <DialogTrigger asChild>
               <Button className="gap-2" onClick={() => setEdit(null)}>
