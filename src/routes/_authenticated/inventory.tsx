@@ -75,6 +75,8 @@ function Inner() {
       setPushing(false);
     }
   };
+
+  return (
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-wrap items-center gap-3">
         <Input placeholder="جستجو در نام، برند، مدل، SKU..." value={q} onChange={(e) => setQ(e.target.value)}
