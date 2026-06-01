@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Download, Pencil, AlertTriangle, Package } from "lucide-react";
+import { Plus, Trash2, Download, Pencil, AlertTriangle, Package, Upload, Loader2 } from "lucide-react";
 import { useInventory, type Product } from "@/hooks/useInventory";
 import { useAedRate } from "@/hooks/useAedRate";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,7 @@ import { formatToman, parseNumber } from "@/lib/format";
 import { downloadExcel } from "@/lib/excel";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
+import { bulkPushPrices } from "@/lib/digikalaApi";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
   head: () => ({ meta: [{ title: "محصولات — سرفیس استور" }] }),
