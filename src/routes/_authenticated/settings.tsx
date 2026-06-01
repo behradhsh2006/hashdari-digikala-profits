@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, KeyRound, Globe, Loader2, ShieldCheck } from "lucide-react";
+import { KeyRound, Globe, Loader2, ShieldCheck, PackageSearch, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrdersConfig, testOrdersConnection } from "@/hooks/useOrdersApi";
 
 const PROVIDER = "integrations";
 
@@ -141,6 +142,9 @@ function Inner() {
         </div>
       </Card>
 
+      <OrdersApiCard />
+
+
       <div className="flex justify-end">
         <Button onClick={save} size="lg" disabled={saving}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "ذخیره در گاوصندوق"}
@@ -160,3 +164,72 @@ function Field({ label, value, onChange, type = "text", placeholder }: {
     </div>
   );
 }
+
+function OrdersApiCard() {
+  const { cfg, save, loading } = useOrdersConfig();
+  const [baseUrl, setBaseUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    setBaseUrl(cfg.baseUrl);
+    setToken(cfg.token);
+  }, [cfg.baseUrl, cfg.token]);
+
+  const onSave = async () => {
+    setSaving(true);
+    try {
+      await save({ baseUrl, token });
+      toast.success("تنظیمات سفارش‌ها ذخیره شد");
+    } catch (e: any) {
+      toast.error(e?.message ?? "ذخیره ناموفق بود");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onTest = async () => {
+    setTesting(true);
+    setResult(null);
+    const r = await testOrdersConnection({ baseUrl, token });
+    setResult(r);
+    setTesting(false);
+  };
+
+  return (
+    <Card className="p-6 border-primary/30" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex items-center gap-2 mb-1">
+        <PackageSearch className="h-5 w-5 text-primary" />
+        <h2 className="font-bold">بخش مدیریت سفارشات (Orders API)</h2>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        پیکربندی مستقل برای دریافت سفارش‌های روزانه و تاریخی مشتریان، جدا از سامانه‌های انبار و حسابداری.
+      </p>
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" /> بارگذاری...</div>
+      ) : (
+        <div className="space-y-3">
+          <Field label="Orders API Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com/orders" />
+          <Field label="Orders Authentication Token / Key" value={token} onChange={(e) => setToken(e.target.value)} type="password" />
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button onClick={onSave} disabled={saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "ذخیره"}
+            </Button>
+            <Button onClick={onTest} disabled={testing || !baseUrl} variant="outline" size="sm">
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : "تست اتصال"}
+            </Button>
+            {result && (
+              <span className={`flex items-center gap-1 text-xs font-semibold ${result.ok ? "text-success" : "text-destructive"}`}>
+                {result.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {result.message}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
-import { Package, AlertTriangle, Wallet, Barcode, TrendingUp } from "lucide-react";
+import { Package, AlertTriangle, Wallet, Barcode, TrendingUp, ShoppingCart, Truck, Clock } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useAedRate } from "@/hooks/useAedRate";
 import { formatToman } from "@/lib/format";
 import { useAuth } from "@/hooks/useAuth";
+import { useDailyOrders } from "@/hooks/useOrdersApi";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -18,6 +19,7 @@ function Dashboard() {
   const { items: catalog } = useCatalog();
   const { rate } = useAedRate();
   const { can, user } = useAuth();
+  const orders = useDailyOrders();
 
   const inStock = serials.filter((s) => s.status === "in_stock").length;
   const sold = serials.filter((s) => s.status === "sold").length;
@@ -48,6 +50,30 @@ function Dashboard() {
         <Stat icon={<TrendingUp className="h-5 w-5" />} label="فروخته‌شده" value={formatToman(sold)} />
         <Stat icon={<Barcode className="h-5 w-5" />} label="رزرو شده" value={formatToman(reserved)} />
       </div>
+
+      <Card className="p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            <h2 className="font-bold">سفارش‌های روزانه مشتریان</h2>
+          </div>
+          {!orders.configured && (
+            <Link to="/settings" className="text-xs text-primary hover:underline">پیکربندی Orders API →</Link>
+          )}
+        </div>
+        {!orders.configured ? (
+          <p className="text-sm text-muted-foreground">برای نمایش سفارش‌ها، ابتدا Orders API را در تنظیمات پیکربندی کنید.</p>
+        ) : orders.error ? (
+          <p className="text-sm text-destructive">خطا در دریافت سفارش‌ها: {orders.error}</p>
+        ) : (
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Stat icon={<ShoppingCart className="h-5 w-5" />} label="سفارش‌های امروز" value={formatToman(orders.stats?.totalToday ?? 0)} />
+            <Stat icon={<Clock className="h-5 w-5" />} label="در حال پردازش" value={formatToman(orders.stats?.processing ?? 0)} />
+            <Stat icon={<Truck className="h-5 w-5" />} label="در انتظار ارسال" value={formatToman(orders.stats?.pendingShipment ?? 0)} tone="success" />
+          </div>
+        )}
+      </Card>
+
 
       {can("view_financials") && (
         <Card className="p-6" style={{ boxShadow: "var(--shadow-card)" }}>
