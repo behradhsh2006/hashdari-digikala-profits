@@ -142,6 +142,9 @@ function Inner() {
         </div>
       </Card>
 
+      <OrdersApiCard />
+
+
       <div className="flex justify-end">
         <Button onClick={save} size="lg" disabled={saving}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "ذخیره در گاوصندوق"}
