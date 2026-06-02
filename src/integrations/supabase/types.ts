@@ -23,6 +23,7 @@ export type Database = {
           id: string
           label: string
           notes: string | null
+          owner_id: string | null
           provider: string
           updated_at: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           label: string
           notes?: string | null
+          owner_id?: string | null
           provider: string
           updated_at?: string
         }
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           label?: string
           notes?: string | null
+          owner_id?: string | null
           provider?: string
           updated_at?: string
         }
