@@ -16,6 +16,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSerialsRouteImport } from './routes/_authenticated/serials'
 import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
+import { Route as AuthenticatedMyKeysRouteImport } from './routes/_authenticated/my-keys'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedFinancialsRouteImport } from './routes/_authenticated/financials'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -56,6 +57,11 @@ const AuthenticatedPricingRoute = AuthenticatedPricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMyKeysRoute = AuthenticatedMyKeysRouteImport.update({
+  id: '/my-keys',
+  path: '/my-keys',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financials': typeof AuthenticatedFinancialsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/my-keys': typeof AuthenticatedMyKeysRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/serials': typeof AuthenticatedSerialsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/financials': typeof AuthenticatedFinancialsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/my-keys': typeof AuthenticatedMyKeysRoute
   '/pricing': typeof AuthenticatedPricingRoute
   '/serials': typeof AuthenticatedSerialsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/financials': typeof AuthenticatedFinancialsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
+  '/_authenticated/my-keys': typeof AuthenticatedMyKeysRoute
   '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/serials': typeof AuthenticatedSerialsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financials'
     | '/inventory'
+    | '/my-keys'
     | '/pricing'
     | '/serials'
     | '/settings'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/financials'
     | '/inventory'
+    | '/my-keys'
     | '/pricing'
     | '/serials'
     | '/settings'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/financials'
     | '/_authenticated/inventory'
+    | '/_authenticated/my-keys'
     | '/_authenticated/pricing'
     | '/_authenticated/serials'
     | '/_authenticated/settings'
@@ -224,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPricingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/my-keys': {
+      id: '/_authenticated/my-keys'
+      path: '/my-keys'
+      fullPath: '/my-keys'
+      preLoaderRoute: typeof AuthenticatedMyKeysRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inventory': {
       id: '/_authenticated/inventory'
       path: '/inventory'
@@ -268,6 +287,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinancialsRoute: typeof AuthenticatedFinancialsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
+  AuthenticatedMyKeysRoute: typeof AuthenticatedMyKeysRoute
   AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedSerialsRoute: typeof AuthenticatedSerialsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -280,6 +300,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinancialsRoute: AuthenticatedFinancialsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
+  AuthenticatedMyKeysRoute: AuthenticatedMyKeysRoute,
   AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedSerialsRoute: AuthenticatedSerialsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
@@ -298,3 +319,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
