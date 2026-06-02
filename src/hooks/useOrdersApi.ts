@@ -17,25 +17,38 @@ export function useOrdersConfig() {
 
   useEffect(() => {
     (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const myId = auth.user?.id ?? null;
       const { data } = await supabase
         .from("api_credentials")
-        .select("credential_key, credential_value")
+        .select("credential_key, credential_value, owner_id")
         .eq("provider", PROVIDER);
-      const next: OrdersConfig = { baseUrl: "", token: "" };
+
+      const pick: Record<string, string> = {};
       for (const r of data ?? []) {
-        if (r.credential_key === "baseUrl") next.baseUrl = r.credential_value ?? "";
-        if (r.credential_key === "token") next.token = r.credential_value ?? "";
+        if (r.owner_id === null) pick[r.credential_key] = r.credential_value ?? "";
       }
-      setCfg(next);
+      if (myId) {
+        for (const r of data ?? []) {
+          if (r.owner_id === myId) pick[r.credential_key] = r.credential_value ?? "";
+        }
+      }
+      setCfg({ baseUrl: pick.baseUrl ?? "", token: pick.token ?? "" });
       setLoading(false);
     })();
   }, []);
 
   const save = async (c: OrdersConfig) => {
-    await supabase.from("api_credentials").delete().eq("provider", PROVIDER);
+    const { data: auth } = await supabase.auth.getUser();
+    const myId = auth.user?.id ?? null;
+    // Scope writes to the current user when signed in; falls back to shared row
+    // when there is no auth session (bypass admin / unauthenticated).
+    const q = supabase.from("api_credentials").delete().eq("provider", PROVIDER);
+    if (myId) await q.eq("owner_id", myId);
+    else await q.is("owner_id", null);
     await supabase.from("api_credentials").insert([
-      { provider: PROVIDER, credential_key: "baseUrl", label: "Orders API Base URL", credential_value: c.baseUrl },
-      { provider: PROVIDER, credential_key: "token", label: "Orders Auth Token", credential_value: c.token },
+      { provider: PROVIDER, credential_key: "baseUrl", label: "Orders API Base URL", credential_value: c.baseUrl, owner_id: myId },
+      { provider: PROVIDER, credential_key: "token", label: "Orders Auth Token", credential_value: c.token, owner_id: myId },
     ]);
     setCfg(c);
   };
