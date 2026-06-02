@@ -103,14 +103,16 @@ function pkcs1v15Unpad(em: Uint8Array): Uint8Array {
 
 async function tryWebCryptoOaep(privatePemBytes: Uint8Array, cipher: Uint8Array, hash: "SHA-256" | "SHA-1"): Promise<string | null> {
   try {
+    const keyBuf = privatePemBytes.slice().buffer;
+    const cipherBuf = cipher.slice().buffer;
     const key = await crypto.subtle.importKey(
       "pkcs8",
-      privatePemBytes,
+      keyBuf,
       { name: "RSA-OAEP", hash },
       false,
       ["decrypt"],
     );
-    const plain = await crypto.subtle.decrypt({ name: "RSA-OAEP" }, key, cipher);
+    const plain = await crypto.subtle.decrypt({ name: "RSA-OAEP" }, key, cipherBuf);
     return new TextDecoder().decode(plain).trim();
   } catch {
     return null;
