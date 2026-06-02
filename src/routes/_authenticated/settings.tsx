@@ -135,7 +135,7 @@ function Inner() {
 
       <DigikalaOAuthCard
         currentToken={data.digikalaToken}
-        onTokenDecrypted={(tok) => {
+        onTokenDecrypted={(tok: string) => {
           setData((d) => ({ ...d, digikalaToken: tok }));
         }}
       />
