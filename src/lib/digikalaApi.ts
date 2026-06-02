@@ -83,6 +83,8 @@ export type DkOrder = {
   delivery_deadline?: string;
 };
 
+export type ShippingMethod = "seller" | "jet" | "digikala" | "other";
+
 export type Commitment = {
   id: string;
   title: string;
@@ -92,13 +94,30 @@ export type Commitment = {
   status: string;
   deadline?: string;
   createdAt?: string;
+  shippingMethod: ShippingMethod;
+  shippingMethodRaw?: string;
 };
 
 const PROCESSING_RE = /process|packag|pending|prepar|در حال|آماده/i;
+const SELLER_SHIP_RE = /seller|fbs|direct|فروشنده|ارسال مستقیم/i;
+const JET_SHIP_RE = /jet|3\s*hour|three\s*hour|۳\s*ساعت|سه\s*ساعت|اکسپرس/i;
+const DIGIKALA_SHIP_RE = /digikala|warehouse|fbm|fba|انبار|دیجی\s*کالا/i;
+
+export function classifyShipping(raw?: string | null): ShippingMethod {
+  const s = (raw ?? "").toString();
+  if (!s) return "other";
+  if (JET_SHIP_RE.test(s)) return "jet";
+  if (SELLER_SHIP_RE.test(s)) return "seller";
+  if (DIGIKALA_SHIP_RE.test(s)) return "digikala";
+  return "other";
+}
 
 function normalizeOrder(o: any): Commitment {
   const items = o.items ?? o.order_items ?? [o];
   const first = items[0] ?? {};
+  const shipRaw =
+    o.shipping_method ?? o.delivery_method ?? o.fulfillment_type ?? o.delivery_type ??
+    first.shipping_method ?? first.delivery_type ?? "";
   return {
     id: String(o.id ?? o.order_id ?? first.id ?? crypto.randomUUID()),
     title: first.product_title ?? first.title_fa ?? o.product_title ?? o.title_fa ?? "—",
@@ -108,6 +127,8 @@ function normalizeOrder(o: any): Commitment {
     status: String(o.status ?? o.state ?? first.status ?? ""),
     deadline: o.shipment_deadline ?? o.delivery_deadline ?? first.shipment_deadline,
     createdAt: o.created_at ?? first.created_at,
+    shippingMethod: classifyShipping(shipRaw),
+    shippingMethodRaw: shipRaw || undefined,
   };
 }
 
