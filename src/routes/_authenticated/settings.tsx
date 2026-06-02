@@ -133,6 +133,13 @@ function Inner() {
         </div>
       </Card>
 
+      <DigikalaOAuthCard
+        currentToken={data.digikalaToken}
+        onTokenDecrypted={(tok) => {
+          setData((d) => ({ ...d, digikalaToken: tok }));
+        }}
+      />
+
       <Card className="p-6" style={{ boxShadow: "var(--shadow-card)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Globe className="h-5 w-5 text-primary" />
