@@ -12,4 +12,10 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  plugins: [
+    // Find your lovable/tanstack config plugin and add the option:
+    lovableTanstackConfig({ 
+      nitro: true 
+    })
+  ],
 });
