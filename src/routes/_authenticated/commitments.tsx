@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Truck, Clock, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Truck, Clock, Loader2, RefreshCw, AlertTriangle, Zap, Store } from "lucide-react";
 import { toJalali } from "@/lib/jalali";
 import { PermissionGate } from "@/components/PermissionGate";
 import { fetchCommitments, type Commitment } from "@/lib/digikalaApi";
@@ -16,26 +18,52 @@ export const Route = createFileRoute("/_authenticated/commitments")({
   ),
 });
 
+const PREF_KEY = "commitments-shipping-prefs-v1";
+type Prefs = { showSeller: boolean; showJet: boolean; showDigikala: boolean };
+const DEFAULT_PREFS: Prefs = { showSeller: true, showJet: true, showDigikala: true };
+
 function Inner() {
   const [today, setToday] = useState<Commitment[]>([]);
   const [yesterday, setYesterday] = useState<Commitment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prefs, setPrefs] = useState<Prefs>(() => {
+    try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREF_KEY) ?? "{}") }; } catch { return DEFAULT_PREFS; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {}
+  }, [prefs]);
 
   const load = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const r = await fetchCommitments();
-      setToday(r.today);
-      setYesterday(r.yesterday);
+      setToday(r.today); setYesterday(r.yesterday);
     } catch (e: any) {
       setError(e?.message ?? "خطا در دریافت سفارش‌ها");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const filter = (items: Commitment[]) => items.filter((c) => {
+    if (c.shippingMethod === "seller") return prefs.showSeller;
+    if (c.shippingMethod === "jet") return prefs.showJet;
+    if (c.shippingMethod === "digikala") return prefs.showDigikala;
+    return true; // unknown → always include
+  });
+
+  const todayFiltered = useMemo(() => filter(today), [today, prefs]);
+  const yesterdayFiltered = useMemo(() => filter(yesterday), [yesterday, prefs]);
+
+  const counts = useMemo(() => {
+    const all = [...today, ...yesterday];
+    return {
+      seller: all.filter((c) => c.shippingMethod === "seller").length,
+      jet: all.filter((c) => c.shippingMethod === "jet").length,
+      digikala: all.filter((c) => c.shippingMethod === "digikala").length,
+    };
+  }, [today, yesterday]);
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -53,6 +81,36 @@ function Inner() {
         </Button>
       </Card>
 
+      <Card className="p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+        <p className="font-bold text-sm mb-3">روش‌های ارسال — فیلتر سطل سفارش‌ها</p>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <MethodToggle
+            icon={<Store className="h-4 w-4 text-primary" />}
+            title="ارسال فروشنده"
+            subtitle="Seller Shipping / Direct Delivery"
+            count={counts.seller}
+            checked={prefs.showSeller}
+            onCheckedChange={(v) => setPrefs((p) => ({ ...p, showSeller: v }))}
+          />
+          <MethodToggle
+            icon={<Zap className="h-4 w-4 text-warning" />}
+            title="ارسال ۳ ساعته / دیجی‌کالا جت"
+            subtitle="3-Hour Jet Delivery"
+            count={counts.jet}
+            checked={prefs.showJet}
+            onCheckedChange={(v) => setPrefs((p) => ({ ...p, showJet: v }))}
+          />
+          <MethodToggle
+            icon={<Truck className="h-4 w-4 text-primary" />}
+            title="ارسال دیجی‌کالا (انبار)"
+            subtitle="Digikala Warehouse (FBA/FBM)"
+            count={counts.digikala}
+            checked={prefs.showDigikala}
+            onCheckedChange={(v) => setPrefs((p) => ({ ...p, showDigikala: v }))}
+          />
+        </div>
+      </Card>
+
       {error && (
         <Card className="p-4 border-destructive/40 bg-destructive/5 text-sm flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
@@ -63,8 +121,26 @@ function Inner() {
         </Card>
       )}
 
-      <Section title="تعهد ارسال امروز" date={toJalali(Date.now())} items={today} tone="primary" loading={loading} />
-      <Section title="تعهد ارسال روز گذشته" date={toJalali(Date.now() - 86400000)} items={yesterday} tone="destructive" loading={loading} />
+      <Section title="تعهد ارسال امروز" date={toJalali(Date.now())} items={todayFiltered} tone="primary" loading={loading} />
+      <Section title="تعهد ارسال روز گذشته" date={toJalali(Date.now() - 86400000)} items={yesterdayFiltered} tone="destructive" loading={loading} />
+    </div>
+  );
+}
+
+function MethodToggle({ icon, title, subtitle, count, checked, onCheckedChange }: {
+  icon: React.ReactNode; title: string; subtitle: string; count: number; checked: boolean; onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-lg border">
+      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <Label className="font-semibold text-sm">{title}</Label>
+          <Badge variant="secondary" className="text-[10px]">{count}</Badge>
+        </div>
+        <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }
