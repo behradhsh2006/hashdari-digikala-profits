@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { KeyRound, Globe, Loader2, ShieldCheck, PackageSearch, CheckCircle2, XCircle } from "lucide-react";
+import { KeyRound, Globe, Loader2, ShieldCheck, PackageSearch, CheckCircle2, XCircle, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { PermissionGate } from "@/components/PermissionGate";
 import { supabase } from "@/integrations/supabase/client";
+import { decryptDigikalaToken } from "@/lib/rsaDecrypt";
 import { useOrdersConfig, testOrdersConnection } from "@/hooks/useOrdersApi";
 
 const PROVIDER = "integrations";
