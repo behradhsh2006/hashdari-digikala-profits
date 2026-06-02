@@ -242,3 +242,114 @@ function OrdersApiCard() {
   );
 }
 
+
+function DigikalaOAuthCard({ currentToken, onTokenDecrypted }: {
+  currentToken: string;
+  onTokenDecrypted: (token: string) => void;
+}) {
+  const [clientId, setClientId] = useState("");
+  const [encrypted, setEncrypted] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Load any previously-saved OAuth scratch values from the vault
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("api_credentials")
+        .select("credential_key, credential_value")
+        .eq("provider", PROVIDER)
+        .in("credential_key", ["digikalaClientId", "digikalaEncryptedCode", "digikalaPrivateKey"]);
+      for (const r of data ?? []) {
+        if (r.credential_key === "digikalaClientId") setClientId(r.credential_value ?? "");
+        if (r.credential_key === "digikalaEncryptedCode") setEncrypted(r.credential_value ?? "");
+        if (r.credential_key === "digikalaPrivateKey") setPrivateKey(r.credential_value ?? "");
+      }
+    })();
+  }, []);
+
+  const decrypt = async () => {
+    if (!privateKey.trim() || !encrypted.trim()) {
+      toast.error("کلید خصوصی و کد رمزنگاری‌شده هر دو الزامی هستند");
+      return;
+    }
+    setBusy(true);
+    try {
+      const token = await decryptDigikalaToken({
+        privateKeyPem: privateKey,
+        encryptedBase64: encrypted,
+      });
+      if (!token) throw new Error("توکن استخراج‌شده خالی است");
+
+      // Persist OAuth inputs + the resulting token in the vault atomically
+      await supabase.from("api_credentials").delete().eq("provider", PROVIDER).in("credential_key", [
+        "digikalaToken", "digikalaClientId", "digikalaEncryptedCode", "digikalaPrivateKey",
+      ]);
+      await supabase.from("api_credentials").insert([
+        { provider: PROVIDER, credential_key: "digikalaToken", label: "Token", credential_value: token },
+        { provider: PROVIDER, credential_key: "digikalaClientId", label: "Client ID", credential_value: clientId },
+        { provider: PROVIDER, credential_key: "digikalaEncryptedCode", label: "Encrypted Code", credential_value: encrypted },
+        { provider: PROVIDER, credential_key: "digikalaPrivateKey", label: "Private Key", credential_value: privateKey },
+      ]);
+
+      onTokenDecrypted(token);
+      toast.success("توکن با موفقیت رمزگشایی و در فیلد Token تزریق شد");
+    } catch (e: any) {
+      toast.error(e?.message ?? "رمزگشایی ناموفق بود");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 border-primary/40" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex items-center gap-2 mb-1">
+        <LockKeyhole className="h-5 w-5 text-primary" />
+        <h2 className="font-bold">OAuth دیجی‌کالا — رمزگشایی توکن</h2>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        با وارد کردن «کد اعتبارسنجی رمزنگاری‌شده» و «کلید خصوصی» (PEM)، توکن زنده استخراج و به‌صورت خودکار در فیلد Token بالا تزریق می‌شود.
+      </p>
+      <div className="space-y-3">
+        <Field label="Client ID (کد کلاینت)" value={clientId} onChange={(e) => setClientId(e.target.value)} />
+        <div className="space-y-1.5">
+          <Label className="text-xs">کد اعتبارسنجی دیجی‌کالا (Encrypted Verification Code — Base64)</Label>
+          <Textarea
+            value={encrypted}
+            onChange={(e) => setEncrypted(e.target.value)}
+            dir="ltr"
+            rows={3}
+            className="text-left font-mono text-xs"
+            placeholder="MIIB...=="
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">کلید خصوصی (Private Key — PEM)</Label>
+          <Textarea
+            value={privateKey}
+            onChange={(e) => setPrivateKey(e.target.value)}
+            dir="ltr"
+            rows={8}
+            className="text-left font-mono text-xs"
+            placeholder={"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Button onClick={decrypt} disabled={busy} size="lg" className="font-bold">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
+            رمزگشایی و فعال‌سازی توکن
+          </Button>
+          {currentToken && (
+            <span className="flex items-center gap-1 text-xs text-success">
+              <CheckCircle2 className="h-4 w-4" /> توکن فعال در گاوصندوق ذخیره شده است
+            </span>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
