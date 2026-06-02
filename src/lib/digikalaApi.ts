@@ -13,18 +13,32 @@ export type DigikalaCreds = {
 };
 
 export async function loadDigikalaCreds(): Promise<DigikalaCreds> {
+  // Per-user creds win over shared master rows (owner_id IS NULL).
+  const { data: auth } = await supabase.auth.getUser();
+  const myId = auth.user?.id ?? null;
   const { data } = await supabase
     .from("api_credentials")
-    .select("credential_key, credential_value")
+    .select("credential_key, credential_value, owner_id")
     .eq("provider", PROVIDER);
-  const out: DigikalaCreds = { sellerId: "", apiKey: "", token: "", baseUrl: DEFAULT_BASE };
+
+  const pick: Record<string, string> = {};
+  // pass 1: shared master rows
   for (const r of data ?? []) {
-    if (r.credential_key === "digikalaSellerId") out.sellerId = r.credential_value ?? "";
-    if (r.credential_key === "digikalaApiKey") out.apiKey = r.credential_value ?? "";
-    if (r.credential_key === "digikalaToken") out.token = r.credential_value ?? "";
-    if (r.credential_key === "digikalaBaseUrl" && r.credential_value) out.baseUrl = r.credential_value;
+    if (r.owner_id === null) pick[r.credential_key] = r.credential_value ?? "";
   }
-  return out;
+  // pass 2: user-owned rows override
+  if (myId) {
+    for (const r of data ?? []) {
+      if (r.owner_id === myId) pick[r.credential_key] = r.credential_value ?? "";
+    }
+  }
+
+  return {
+    sellerId: pick.digikalaSellerId ?? "",
+    apiKey: pick.digikalaApiKey ?? "",
+    token: pick.digikalaToken ?? "",
+    baseUrl: pick.digikalaBaseUrl || DEFAULT_BASE,
+  };
 }
 
 /** Build headers per Digikala Open API spec. */
@@ -69,6 +83,8 @@ export type DkOrder = {
   delivery_deadline?: string;
 };
 
+export type ShippingMethod = "seller" | "jet" | "digikala" | "other";
+
 export type Commitment = {
   id: string;
   title: string;
@@ -78,13 +94,30 @@ export type Commitment = {
   status: string;
   deadline?: string;
   createdAt?: string;
+  shippingMethod: ShippingMethod;
+  shippingMethodRaw?: string;
 };
 
 const PROCESSING_RE = /process|packag|pending|prepar|در حال|آماده/i;
+const SELLER_SHIP_RE = /seller|fbs|direct|فروشنده|ارسال مستقیم/i;
+const JET_SHIP_RE = /jet|3\s*hour|three\s*hour|۳\s*ساعت|سه\s*ساعت|اکسپرس/i;
+const DIGIKALA_SHIP_RE = /digikala|warehouse|fbm|fba|انبار|دیجی\s*کالا/i;
+
+export function classifyShipping(raw?: string | null): ShippingMethod {
+  const s = (raw ?? "").toString();
+  if (!s) return "other";
+  if (JET_SHIP_RE.test(s)) return "jet";
+  if (SELLER_SHIP_RE.test(s)) return "seller";
+  if (DIGIKALA_SHIP_RE.test(s)) return "digikala";
+  return "other";
+}
 
 function normalizeOrder(o: any): Commitment {
   const items = o.items ?? o.order_items ?? [o];
   const first = items[0] ?? {};
+  const shipRaw =
+    o.shipping_method ?? o.delivery_method ?? o.fulfillment_type ?? o.delivery_type ??
+    first.shipping_method ?? first.delivery_type ?? "";
   return {
     id: String(o.id ?? o.order_id ?? first.id ?? crypto.randomUUID()),
     title: first.product_title ?? first.title_fa ?? o.product_title ?? o.title_fa ?? "—",
@@ -94,6 +127,8 @@ function normalizeOrder(o: any): Commitment {
     status: String(o.status ?? o.state ?? first.status ?? ""),
     deadline: o.shipment_deadline ?? o.delivery_deadline ?? first.shipment_deadline,
     createdAt: o.created_at ?? first.created_at,
+    shippingMethod: classifyShipping(shipRaw),
+    shippingMethodRaw: shipRaw || undefined,
   };
 }
 

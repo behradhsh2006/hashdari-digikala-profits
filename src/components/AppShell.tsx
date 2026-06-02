@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@/lib/permissions";
 import {
   LayoutDashboard, Package, Barcode, Calculator, FileSpreadsheet,
-  Truck, Wallet, Users, Settings, LogOut, Menu, X,
+  Truck, Wallet, Users, Settings, LogOut, Menu, X, KeyRound,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { to: "/bulk",        label: "ورود/خروج اکسل",     icon: FileSpreadsheet, perm: "bulk_import" },
   { to: "/commitments", label: "تعهدات دیجی‌کالا",    icon: Truck,           perm: "view_commitments" },
   { to: "/financials",  label: "گزارش مالی",         icon: Wallet,          perm: "view_financials" },
+  { to: "/my-keys",     label: "کلیدهای من",          icon: KeyRound,        perm: "view_dashboard" },
   { to: "/users",       label: "مدیریت کاربران",      icon: Users,           perm: "manage_users" },
   { to: "/settings",    label: "تنظیمات و API",       icon: Settings,        perm: "manage_settings" },
 ];
