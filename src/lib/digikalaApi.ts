@@ -13,18 +13,32 @@ export type DigikalaCreds = {
 };
 
 export async function loadDigikalaCreds(): Promise<DigikalaCreds> {
+  // Per-user creds win over shared master rows (owner_id IS NULL).
+  const { data: auth } = await supabase.auth.getUser();
+  const myId = auth.user?.id ?? null;
   const { data } = await supabase
     .from("api_credentials")
-    .select("credential_key, credential_value")
+    .select("credential_key, credential_value, owner_id")
     .eq("provider", PROVIDER);
-  const out: DigikalaCreds = { sellerId: "", apiKey: "", token: "", baseUrl: DEFAULT_BASE };
+
+  const pick: Record<string, string> = {};
+  // pass 1: shared master rows
   for (const r of data ?? []) {
-    if (r.credential_key === "digikalaSellerId") out.sellerId = r.credential_value ?? "";
-    if (r.credential_key === "digikalaApiKey") out.apiKey = r.credential_value ?? "";
-    if (r.credential_key === "digikalaToken") out.token = r.credential_value ?? "";
-    if (r.credential_key === "digikalaBaseUrl" && r.credential_value) out.baseUrl = r.credential_value;
+    if (r.owner_id === null) pick[r.credential_key] = r.credential_value ?? "";
   }
-  return out;
+  // pass 2: user-owned rows override
+  if (myId) {
+    for (const r of data ?? []) {
+      if (r.owner_id === myId) pick[r.credential_key] = r.credential_value ?? "";
+    }
+  }
+
+  return {
+    sellerId: pick.digikalaSellerId ?? "",
+    apiKey: pick.digikalaApiKey ?? "",
+    token: pick.digikalaToken ?? "",
+    baseUrl: pick.digikalaBaseUrl || DEFAULT_BASE,
+  };
 }
 
 /** Build headers per Digikala Open API spec. */
