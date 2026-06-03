@@ -69,6 +69,9 @@ function Inner() {
         </div>
       </Card>
 
+      <CreateUserCard onCreated={load} />
+
+
       <Card className="p-4">
         {loading ? (
           <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> در حال بارگذاری...</div>
