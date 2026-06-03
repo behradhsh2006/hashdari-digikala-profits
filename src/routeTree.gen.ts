@@ -22,6 +22,7 @@ import { Route as AuthenticatedFinancialsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCommitmentsRouteImport } from './routes/_authenticated/commitments'
 import { Route as AuthenticatedBulkRouteImport } from './routes/_authenticated/bulk'
+import { Route as AuthenticatedAccessDeniedRouteImport } from './routes/_authenticated/access-denied'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -88,10 +89,17 @@ const AuthenticatedBulkRoute = AuthenticatedBulkRouteImport.update({
   path: '/bulk',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAccessDeniedRoute =
+  AuthenticatedAccessDeniedRouteImport.update({
+    id: '/access-denied',
+    path: '/access-denied',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/access-denied': typeof AuthenticatedAccessDeniedRoute
   '/bulk': typeof AuthenticatedBulkRoute
   '/commitments': typeof AuthenticatedCommitmentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -106,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/access-denied': typeof AuthenticatedAccessDeniedRoute
   '/bulk': typeof AuthenticatedBulkRoute
   '/commitments': typeof AuthenticatedCommitmentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/access-denied': typeof AuthenticatedAccessDeniedRoute
   '/_authenticated/bulk': typeof AuthenticatedBulkRoute
   '/_authenticated/commitments': typeof AuthenticatedCommitmentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/access-denied'
     | '/bulk'
     | '/commitments'
     | '/dashboard'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/access-denied'
     | '/bulk'
     | '/commitments'
     | '/dashboard'
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/access-denied'
     | '/_authenticated/bulk'
     | '/_authenticated/commitments'
     | '/_authenticated/dashboard'
@@ -278,10 +291,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBulkRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/access-denied': {
+      id: '/_authenticated/access-denied'
+      path: '/access-denied'
+      fullPath: '/access-denied'
+      preLoaderRoute: typeof AuthenticatedAccessDeniedRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAccessDeniedRoute: typeof AuthenticatedAccessDeniedRoute
   AuthenticatedBulkRoute: typeof AuthenticatedBulkRoute
   AuthenticatedCommitmentsRoute: typeof AuthenticatedCommitmentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -295,6 +316,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccessDeniedRoute: AuthenticatedAccessDeniedRoute,
   AuthenticatedBulkRoute: AuthenticatedBulkRoute,
   AuthenticatedCommitmentsRoute: AuthenticatedCommitmentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,

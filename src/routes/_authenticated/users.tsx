@@ -29,7 +29,7 @@ function Inner() {
       supabase.from("profiles").select("id, display_name"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
-    const order: Role[] = ["super_admin", "manager", "warehouse", "viewer"];
+    const order: Role[] = ["super_admin", "manager", "accountant", "employee", "warehouse", "viewer"];
     const merged: Row[] = (profiles ?? []).map((p) => {
       const userRoles = (roles ?? []).filter((r) => r.user_id === p.id).map((r) => r.role as Role);
       const role: Role = order.find((r) => userRoles.includes(r)) ?? "viewer";

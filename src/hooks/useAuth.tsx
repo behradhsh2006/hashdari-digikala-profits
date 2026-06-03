@@ -42,7 +42,7 @@ async function loadAppUser(u: User): Promise<AppUser> {
     supabase.from("user_roles").select("role").eq("user_id", u.id),
   ]);
   // Highest role priority
-  const order: Role[] = ["super_admin", "manager", "warehouse", "viewer"];
+  const order: Role[] = ["super_admin", "manager", "accountant", "employee", "warehouse", "viewer"];
   const userRoles = (roles ?? []).map((r) => r.role as Role);
   const role: Role = order.find((r) => userRoles.includes(r)) ?? "viewer";
   return {
