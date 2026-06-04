@@ -76,11 +76,15 @@ export type Database = {
       }
       products: {
         Row: {
+          base_price: number
           brand: string | null
+          color: string | null
           commission_percent: number
           cost_original: number
+          cpu: string | null
           created_at: string
           currency: string
+          description: string | null
           digikala_dkp: string | null
           fixed_costs: number
           id: string
@@ -89,16 +93,24 @@ export type Database = {
           name: string
           owner_id: string
           profit_percent: number
+          ram: string | null
+          reorder_threshold: number
+          shipping_status: string
           sku: string | null
           stock: number
+          storage: string | null
           updated_at: string
         }
         Insert: {
+          base_price?: number
           brand?: string | null
+          color?: string | null
           commission_percent?: number
           cost_original?: number
+          cpu?: string | null
           created_at?: string
           currency?: string
+          description?: string | null
           digikala_dkp?: string | null
           fixed_costs?: number
           id?: string
@@ -107,16 +119,24 @@ export type Database = {
           name: string
           owner_id: string
           profit_percent?: number
+          ram?: string | null
+          reorder_threshold?: number
+          shipping_status?: string
           sku?: string | null
           stock?: number
+          storage?: string | null
           updated_at?: string
         }
         Update: {
+          base_price?: number
           brand?: string | null
+          color?: string | null
           commission_percent?: number
           cost_original?: number
+          cpu?: string | null
           created_at?: string
           currency?: string
+          description?: string | null
           digikala_dkp?: string | null
           fixed_costs?: number
           id?: string
@@ -125,8 +145,12 @@ export type Database = {
           name?: string
           owner_id?: string
           profit_percent?: number
+          ram?: string | null
+          reorder_threshold?: number
+          shipping_status?: string
           sku?: string | null
           stock?: number
+          storage?: string | null
           updated_at?: string
         }
         Relationships: []
