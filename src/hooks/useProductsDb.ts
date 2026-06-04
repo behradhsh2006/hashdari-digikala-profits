@@ -45,7 +45,7 @@ export function useProductsDb() {
     products,
     loading,
     refresh,
-    addProduct: async (input: Parameters<typeof create>[0]["data"]) => {
+    addProduct: async (input: any) => {
       const { product } = await create({ data: input });
       setProducts((prev) => [product, ...prev]);
       return product;
