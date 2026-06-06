@@ -1,4 +1,5 @@
-const fs = require('fs')
+import fs from 'node:fs'
+
 const path = '.output/server/wrangler.json'
 
 if (fs.existsSync(path)) {
